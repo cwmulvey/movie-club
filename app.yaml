@@ -1,0 +1,53 @@
+alerts:
+- rule: DEPLOYMENT_FAILED
+- rule: DOMAIN_FAILED
+features:
+- buildpack-stack=ubuntu-22
+ingress:
+  rules:
+  - component:
+      name: movie-club-backend
+    match:
+      path:
+        prefix: /
+  - component:
+      name: movie-club-frontend
+    match:
+      path:
+        prefix: /movie-club-frontend
+name: movie-club-backend
+region: nyc
+services:
+- environment_slug: node-js
+  envs:
+  - key: MONGODB_URI
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+    value: EV[1:DMu/iiyV0OpvXa5LvUxViZKUUe8KAOpQ:TYo0tobGXuWUQxrAB0cv2Ek4yFOZRZ1q2RFMZh43IKgwymxJyRZp3XE9Tr0rD69gmsskv5naDYl+ljmUUzMm9grsCQIkZeZL06BIqLSVixy3qL5Ney40p1+9ciY26gfbd/uXF/4b9JLPu3OAsNTc+iKavqZ60DqWQnXUdUweAcFXSNrHEA8EF97CJpzjb8o=]
+  - key: NODE_ENV
+    scope: RUN_AND_BUILD_TIME
+    value: production
+  - key: TMDB_API_KEY
+    scope: RUN_AND_BUILD_TIME
+    type: SECRET
+    value: EV[1:6fUacMVdGO8YBNiNzHsEymZOFC6/vV9c:fytw8sXutNM5JUETQHnwJLMcyRRII6xle7paKYq0t/QQYkthhC/R+AfqZyiex+wT]
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: cwmulvey/movie-club
+  http_port: 5000
+  instance_count: 1
+  instance_size_slug: apps-s-1vcpu-0.5gb
+  name: movie-club-backend
+  run_command: npm start
+  source_dir: backend
+static_sites:
+- build_command: npm install && npm run build
+  environment_slug: node-js
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: cwmulvey/movie-club
+  name: movie-club-frontend
+  output_dir: dist
+  source_dir: frontend
