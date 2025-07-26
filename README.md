@@ -1,6 +1,20 @@
 # Movie Club 🎬
 
-A modern web application for movie enthusiasts to discover, track, and share their favorite films.
+Business Logic Requirements
+## User Tiers
+
+Base Users: Can only see top 10 and bottom 10 movies in their ranked list
+Premium Users: $7.99 one-time payment for unlimited access
+Referral System: Base users unlock 10 additional movies (positions 11-20, 21-30, 31-40) per referral, max 3 referrals
+
+## Ranking System
+
+Movies are placed in three categories: "liked" (6.5-10), "ok" (3.5-6.4), "didn't like" (0-3.4)
+Rankings use binary comparison (halving algorithm) to find position
+Ratings are calculated based on position within category using interpolation formula
+Users can have ties (same rank for multiple movies)
+
+
 
 ## 🚀 Features
 
@@ -64,23 +78,12 @@ Movie_Club/
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## 🙏 Acknowledgments
 
 - Built with React and TypeScript
 - Styled with Tailwind CSS
 - Icons and assets from various open-source libraries
+- Movie Data sourced from The Movie Database
 
 ---
 
