@@ -2,19 +2,15 @@
 
 Business Logic Requirements
 ## User Tiers
-
-Base Users: Can only see top 10 and bottom 10 movies in their ranked list
-Premium Users: $7.99 one-time payment for unlimited access
-Referral System: Base users unlock 10 additional movies (positions 11-20, 21-30, 31-40) per referral, max 3 referrals
+- Base Users: Can only see top 10 and bottom 10 movies in their ranked list
+- Premium Users: $7.99 one-time payment for unlimited access
+- Referral System: Base users unlock 10 additional movies (positions 11-20, 21-30, 31-40) per referral, max 3 referrals
 
 ## Ranking System
-
-Movies are placed in three categories: "liked" (6.5-10), "ok" (3.5-6.4), "didn't like" (0-3.4)
-Rankings use binary comparison (halving algorithm) to find position
-Ratings are calculated based on position within category using interpolation formula
-Users can have ties (same rank for multiple movies)
-
-
+- Movies are placed in three categories: "liked" (6.5-10), "ok" (3.5-6.4), "didn't like" (0-3.4)
+- Rankings use binary comparison (halving algorithm) to find position
+- Ratings are calculated based on position within category using interpolation formula
+- Users can have ties (same rank for multiple movies)
 
 ## 🚀 Features
 
