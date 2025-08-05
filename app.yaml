@@ -18,7 +18,8 @@ ingress:
 name: movie-club-backend
 region: nyc
 services:
-- environment_slug: node-js
+- build_command: npm install && npm run build
+  environment_slug: node-js
   envs:
   - key: MONGODB_URI
     scope: RUN_AND_BUILD_TIME

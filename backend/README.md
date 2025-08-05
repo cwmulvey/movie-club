@@ -134,19 +134,93 @@ The backend is fully prepared with TypeScript types and middleware for:
 
 ## Production Deployment
 
+### 🚀 Quick Deployment Checklist
+
+Before deploying, ensure:
+- [ ] `npm run build` works locally without errors
+- [ ] All environment variables are set in Digital Ocean App Platform
+- [ ] MongoDB Atlas IP whitelist includes Digital Ocean IPs
+- [ ] app.yaml includes `build_command: npm install && npm run build`
+- [ ] No sensitive data (.env files) committed to repository
+
 ### Digital Ocean App Platform
 
-The application is configured for deployment on Digital Ocean App Platform:
+The application is configured for deployment on Digital Ocean App Platform with automatic deployment from GitHub.
+
+#### Deployment Configuration
+
+**Key Requirements:**
+- ✅ **TypeScript Build**: The app must be compiled before deployment
+- ✅ **Environment Variables**: Set in Digital Ocean App Platform
+- ✅ **Node.js v18+**: Required for TypeScript and dependencies
+
+**app.yaml Configuration:**
+```yaml
+services:
+- build_command: npm install && npm run build  # CRITICAL: Must build TypeScript
+  environment_slug: node-js
+  run_command: npm start  # Runs compiled JS from dist/
+  source_dir: backend
+  http_port: 5000
+```
+
+#### Deployment Process
+
+1. **Automatic Deployment**: Pushes to `main` branch trigger deployment
+2. **Build Phase**: 
+   - Installs dependencies: `npm install`
+   - Compiles TypeScript: `npm run build` → creates `dist/` directory
+3. **Run Phase**: 
+   - Executes: `npm start` → `node dist/server.js`
+   - Connects to MongoDB Atlas and Redis (if configured)
+
+#### Environment Variables (App Platform)
+
+Required in Digital Ocean App Platform settings:
+- `MONGODB_URI` - MongoDB Atlas connection string (encrypted)
+- `TMDB_API_KEY` - TMDB API key (encrypted)
+- `NODE_ENV` - Set to "production"
+- `PORT` - Usually 5000 (or use App Platform default)
+- `REDIS_URL` - Optional for production Redis
+
+#### Server Infrastructure
 
 1. **Server**: Ubuntu droplet at `138.197.67.51`
-2. **MongoDB**: Atlas cloud database
-3. **Redis**: Local Redis server on the droplet
-4. **Environment**: Production environment variables set in App Platform
+2. **MongoDB**: Atlas cloud database (external)
+3. **Redis**: Local Redis server on droplet (optional)
+4. **NGINX**: Configured as reverse proxy
+5. **SSL**: Handled by Digital Ocean App Platform
+
+### Deployment Troubleshooting
+
+#### Common Deployment Failures
+
+1. **"Cannot find module './dist/server.js'"**
+   - **Cause**: Missing build step
+   - **Fix**: Ensure `build_command: npm install && npm run build` is in app.yaml
+
+2. **"TypeScript compilation failed"**
+   - **Cause**: TypeScript errors in code
+   - **Fix**: Run `npm run build` locally to check for errors
+
+3. **"Failed to connect to MongoDB"**
+   - **Cause**: Missing or incorrect MONGODB_URI
+   - **Fix**: Check environment variables in App Platform settings
+
+4. **Port binding issues**
+   - **Cause**: Wrong PORT configuration
+   - **Fix**: Use `process.env.PORT || 5000` in server.ts
+
+#### Monitoring Deployment
+
+1. **Digital Ocean Dashboard**: Check build logs and runtime logs
+2. **Health Endpoint**: Monitor `/api/health` after deployment
+3. **GitHub Actions**: Deployment status shown on commits
 
 ### Database Connections
 
-- **MongoDB**: Connected via Atlas cloud service
-- **Redis**: Connected to local Redis instance on the same server
+- **MongoDB**: Connected via Atlas cloud service (ensure IP whitelist includes App Platform)
+- **Redis**: Optional - app runs without Redis if not configured
 
 ## Troubleshooting
 
