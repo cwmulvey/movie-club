@@ -7,8 +7,9 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 import app from './app';
 import mongoose from 'mongoose';
+import config from './config/app.config';
 
-const PORT = process.env.PORT || 5000;
+const PORT = config.app.port || 5000;
 
 const startServer = async () => {
   try {
