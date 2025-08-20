@@ -2,8 +2,10 @@ import dotenv from 'dotenv';
 import path from 'path';
 import './models';
 
-// Load environment variables
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+// Load environment variables - in production they come from the system, not .env file
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({ path: path.join(__dirname, '..', '.env') });
+}
 
 import app from './app';
 import mongoose from 'mongoose';

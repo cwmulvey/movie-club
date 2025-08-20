@@ -1,7 +1,10 @@
 import mongoose, { ConnectOptions } from 'mongoose';
 import dotenv from 'dotenv';
 
-dotenv.config();
+// Only load .env file in development
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 const connectDB = async (): Promise<void> => {
   try {
