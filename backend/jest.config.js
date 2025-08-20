@@ -11,10 +11,7 @@ module.exports = {
   coverageDirectory: 'coverage',
   globals: {
     'ts-jest': {
-      tsconfig: {
-        experimentalDecorators: true,
-        emitDecoratorMetadata: true,
-      },
+      tsconfig: './tsconfig.test.json',
     },
   },
 };

@@ -4,7 +4,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node src/server.ts",
-    "build": "tsc --project tsconfig.build.json",
+    "build": "tsc",
     "start": "node dist/server.js",
     "postbuild": "echo 'Build completed successfully'",
     "test": "jest",
