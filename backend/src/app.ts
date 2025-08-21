@@ -140,8 +140,10 @@ app.get('/api/health', async (_req, res) => {
   }
 });
 
-// Routes will be added here
-// app.use('/api/auth', authRoutes);
+// Routes
+import authRoutes from './routes/auth.routes';
+
+app.use('/api/auth', authRoutes);
 // app.use('/api/users', userRoutes);
 
 // 404 handler
