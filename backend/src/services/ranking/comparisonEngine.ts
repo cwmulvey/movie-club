@@ -177,6 +177,7 @@ export class ComparisonEngine {
   }
   
   async completeRanking(sessionId: string): Promise<IRanking> {
+    console.log(`DEBUG: completeRanking called for session ${sessionId}`);
     const session = this.sessions.get(sessionId);
     
     if (!session) {
@@ -233,12 +234,16 @@ export class ComparisonEngine {
     
     await newRanking.save();
     
+    console.log(`DEBUG: Starting rating recalculation for category '${session.category}'`);
+    
     // Immediately recalculate ratings for ALL movies in category (synchronous)
     // This is necessary because the total count affects the rating formula for all movies
     await ratingCalculator.recalculateRatingsForCategory(
       session.userId,
       session.category
     );
+    
+    console.log(`DEBUG: Completed rating recalculation for category '${session.category}'`);
     
     // Queue movie stats update (can be async)
     await rankingQueue.queueMovieStatsUpdate((movie._id as mongoose.Types.ObjectId).toString());
