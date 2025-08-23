@@ -142,8 +142,12 @@ app.get('/api/health', async (_req, res) => {
 
 // Routes
 import authRoutes from './routes/auth.routes';
+import movieRoutes from './routes/movie.routes';
+import rankingRoutes from './routes/ranking.routes';
 
 app.use('/api/auth', authRoutes);
+app.use('/api/movies', movieRoutes);
+app.use('/api/rankings', rankingRoutes);
 // app.use('/api/users', userRoutes);
 
 // 404 handler
