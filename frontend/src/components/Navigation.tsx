@@ -11,7 +11,7 @@ export default function Navigation() {
     { path: '/social', label: 'Social' },
     { path: '/search', label: 'Search' },
     { path: '/leaderboard', label: 'Leaderboard' },
-    { path: '/account', label: 'Account' },
+    { path: '/account', label: 'My Rankings' },
   ]
 
   const handleLogout = () => {

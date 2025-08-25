@@ -10,6 +10,7 @@ import Search from './pages/Search'
 import Leaderboard from './pages/Leaderboard'
 import Account from './pages/Account'
 import Profile from './pages/Profile'
+import MovieDetails from './pages/MovieDetails'
 
 function AppContent() {
   const { isAuthenticated } = useAuth();
@@ -53,6 +54,11 @@ function AppContent() {
           <Route path="/profile" element={
             <ProtectedRoute>
               <Profile />
+            </ProtectedRoute>
+          } />
+          <Route path="/movie/:tmdbId" element={
+            <ProtectedRoute>
+              <MovieDetails />
             </ProtectedRoute>
           } />
         </Routes>

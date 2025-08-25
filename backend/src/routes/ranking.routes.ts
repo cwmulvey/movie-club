@@ -6,6 +6,7 @@ import {
   categoryManager, 
   ratingCalculator 
 } from '../services/ranking';
+import { Category } from '../services/ranking/categoryManager';
 import { UserRanking } from '../models/UserRanking';
 import { Movie } from '../models/Movie';
 import { AppError } from '../utils/AppError';
@@ -22,6 +23,12 @@ const tmdbApi = axios.create({
   params: {
     api_key: TMDB_API_KEY,
   },
+});
+
+// Add logging middleware to debug routing
+router.use((req: any, _res: any, next: any) => {
+  console.log(`Ranking route hit: ${req.method} ${req.url}`);
+  next();
 });
 
 router.use(authenticateToken);
@@ -380,6 +387,77 @@ router.get('/category/:category', async (req: AuthenticatedRequest, res: Respons
       ratingRange: categoryManager.getCategoryRange(category as any)
     });
   } catch (error) {
+    next(error);
+  }
+});
+
+router.put('/reorder', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    console.log('Reorder endpoint hit');
+    console.log('Request body:', req.body);
+    console.log('Request user:', req.user);
+    
+    if (!req.user) {
+      throw new AppError('User not authenticated', 401, 'UNAUTHORIZED');
+    }
+    
+    const { updates } = req.body;
+    const userId = req.user._id;
+    console.log('User ID:', userId);
+    console.log('Updates:', updates);
+    
+    if (!updates || !Array.isArray(updates)) {
+      throw new AppError('Updates array is required', 400, 'MISSING_UPDATES');
+    }
+    
+    // Group updates by category for efficient processing
+    const categorizedUpdates: { [key: string]: any[] } = {};
+    
+    updates.forEach((update: any) => {
+      if (!categorizedUpdates[update.category]) {
+        categorizedUpdates[update.category] = [];
+      }
+      categorizedUpdates[update.category].push(update);
+    });
+    
+    // Process each category
+    for (const [category, categoryUpdates] of Object.entries(categorizedUpdates)) {
+      // Sort by new rank to ensure correct order
+      const sortedUpdates = categoryUpdates.sort((a, b) => a.newRank - b.newRank);
+      
+      // Update ranks in database
+      const bulkOps = sortedUpdates.map((update, index) => ({
+        updateOne: {
+          filter: { 
+            _id: new mongoose.Types.ObjectId(update.rankingId),
+            userId: userId
+          },
+          update: {
+            $set: {
+              rankInCategory: index + 1
+            }
+          }
+        }
+      }));
+      
+      if (bulkOps.length > 0) {
+        await UserRanking.bulkWrite(bulkOps);
+        
+        // Recalculate ratings for this entire category
+        await ratingCalculator.recalculateRatingsForCategory(
+          userId,
+          category as Category
+        );
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: 'Rankings updated successfully'
+    });
+    
+  } catch (error) {
+    console.error('Error in reorder endpoint:', error);
     next(error);
   }
 });

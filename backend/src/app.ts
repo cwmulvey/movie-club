@@ -147,6 +147,14 @@ import rankingRoutes from './routes/ranking.routes';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/movies', movieRoutes);
+
+// Debug logging for rankings routes
+app.use('/api/rankings', (req, _res, next) => {
+  console.log(`Main app: Rankings route ${req.method} ${req.url}`);
+  console.log('Headers:', req.headers);
+  next();
+});
+
 app.use('/api/rankings', rankingRoutes);
 // app.use('/api/users', userRoutes);
 

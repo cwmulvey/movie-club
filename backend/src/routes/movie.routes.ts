@@ -67,13 +67,17 @@ router.get('/:tmdbId', async (req: Request, res: Response, next: NextFunction) =
     let movie = await Movie.findOne({ tmdbId: Number(tmdbId) });
     
     if (!movie) {
-      const [tmdbMovieResponse, creditsResponse] = await Promise.all([
+      const [tmdbMovieResponse, creditsResponse, watchProvidersResponse, externalIdsResponse] = await Promise.all([
         tmdbApi.get(`/movie/${tmdbId}`),
-        tmdbApi.get(`/movie/${tmdbId}/credits`)
+        tmdbApi.get(`/movie/${tmdbId}/credits`),
+        tmdbApi.get(`/movie/${tmdbId}/watch/providers`).catch(() => ({ data: { results: {} } })),
+        tmdbApi.get(`/movie/${tmdbId}/external_ids`).catch(() => ({ data: {} }))
       ]);
       
       const tmdbMovie = tmdbMovieResponse.data;
       const credits = creditsResponse.data;
+      const watchProviders = watchProvidersResponse.data;
+      const externalIds = externalIdsResponse.data;
       
       movie = new Movie({
         tmdbId: tmdbMovie.id,
@@ -98,6 +102,30 @@ router.get('/:tmdbId', async (req: Request, res: Response, next: NextFunction) =
       await movie.save();
     }
     
+    // Fetch additional data for existing movies too
+    let additionalData: any = {};
+    if (movie) {
+      try {
+        const [watchProvidersResponse, externalIdsResponse, tmdbDetailResponse] = await Promise.all([
+          tmdbApi.get(`/movie/${movie.tmdbId}/watch/providers`).catch(() => ({ data: { results: {} } })),
+          tmdbApi.get(`/movie/${movie.tmdbId}/external_ids`).catch(() => ({ data: {} })),
+          tmdbApi.get(`/movie/${movie.tmdbId}`).catch(() => ({ data: {} }))
+        ]);
+        
+        additionalData = {
+          watchProviders: watchProvidersResponse.data.results?.US || {},
+          externalIds: externalIdsResponse.data,
+          budget: tmdbDetailResponse.data.budget,
+          revenue: tmdbDetailResponse.data.revenue,
+          tagline: tmdbDetailResponse.data.tagline,
+          homepage: tmdbDetailResponse.data.homepage,
+          productionCompanies: tmdbDetailResponse.data.production_companies?.map((c: any) => c.name) || []
+        };
+      } catch (error) {
+        console.error('Error fetching additional data:', error);
+      }
+    }
+    
     res.json({
       id: movie._id,
       tmdbId: movie.tmdbId,
@@ -113,7 +141,8 @@ router.get('/:tmdbId', async (req: Request, res: Response, next: NextFunction) =
       tmdbVoteAverage: movie.tmdbVoteAverage,
       tmdbVoteCount: movie.tmdbVoteCount,
       tmdbPopularity: movie.tmdbPopularity,
-      appStats: movie.appStats
+      appStats: movie.appStats,
+      ...additionalData
     });
   } catch (error) {
     next(error);

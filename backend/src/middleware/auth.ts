@@ -9,8 +9,10 @@ export const authenticateToken = async (
   next: NextFunction
 ) => {
   try {
+    console.log('Auth middleware called for:', req.method, req.url);
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
+    console.log('Token present:', !!token);
 
     if (!token) {
       res.status(401).json({
@@ -75,8 +77,10 @@ export const authenticateToken = async (
 
     req.user = user as any;
     req.token = token;
+    console.log('Auth successful, user set:', user._id);
     next();
   } catch (error) {
+    console.error('Auth middleware error:', error);
     if (error instanceof jwt.TokenExpiredError) {
       res.status(401).json({
         success: false,
