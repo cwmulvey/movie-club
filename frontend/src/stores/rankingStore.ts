@@ -56,6 +56,7 @@ interface RankingStore {
   startRanking: (tmdbId: number, category: Category) => Promise<void>;
   submitComparison: (preference: 'movie1' | 'movie2' | 'tie') => Promise<void>;
   cancelSession: () => Promise<void>;
+  clearSession: () => void;
   fetchUserRankings: () => Promise<void>;
   updateRanking: (rankingId: string, updates: Partial<Ranking>) => Promise<void>;
   deleteRanking: (rankingId: string) => Promise<void>;
@@ -74,7 +75,8 @@ const useRankingStore = create<RankingStore>((set, get) => ({
   error: null,
   
   startRanking: async (tmdbId: number, category: Category) => {
-    set({ isLoading: true, error: null });
+    // Clear any existing session and errors first
+    set({ currentSession: null, isLoading: true, error: null });
     
     try {
       const token = localStorage.getItem('token');
@@ -177,7 +179,13 @@ const useRankingStore = create<RankingStore>((set, get) => ({
   
   cancelSession: async () => {
     const session = get().currentSession;
-    if (!session || !session.sessionId) return;
+    if (!session) return;
+    
+    // If session is completed or has no valid sessionId, just clear the state
+    if (session.isCompleted || !session.sessionId || session.sessionId === '') {
+      set({ currentSession: null });
+      return;
+    }
     
     try {
       const token = localStorage.getItem('token');
@@ -197,6 +205,10 @@ const useRankingStore = create<RankingStore>((set, get) => ({
         error: error.response?.data?.message || 'Failed to cancel session'
       });
     }
+  },
+  
+  clearSession: () => {
+    set({ currentSession: null, error: null });
   },
   
   fetchUserRankings: async () => {

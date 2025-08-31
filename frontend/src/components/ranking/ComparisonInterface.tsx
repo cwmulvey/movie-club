@@ -1,6 +1,5 @@
 import React from 'react';
 import useRankingStore from '../../stores/rankingStore';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
 const ComparisonInterface: React.FC = () => {
   const {
@@ -54,15 +53,15 @@ const ComparisonInterface: React.FC = () => {
     (currentSession.completedComparisons + currentSession.estimatedRemainingComparisons) * 100;
   
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="mb-6">
+    <div className="max-w-6xl mx-auto">
+      <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
-          <h2 className="text-2xl font-bold text-gray-900">
+          <h2 className="text-xl font-bold text-gray-900">
             Which movie did you prefer?
           </h2>
           <button
             onClick={() => cancelSession()}
-            className="text-sm text-gray-500 hover:text-gray-700"
+            className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1 rounded hover:bg-gray-100"
           >
             Cancel
           </button>
@@ -80,22 +79,22 @@ const ComparisonInterface: React.FC = () => {
         </p>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <MovieCard
-          movie={movie1}
-          onSelect={() => submitComparison('movie1')}
-          disabled={isLoading}
-          label="I prefer this one"
-          icon={<ChevronLeftIcon className="w-5 h-5" />}
-        />
+      <div className="flex justify-center gap-6">
+        <div className="w-full max-w-xs">
+          <MovieCard
+            movie={movie1}
+            onSelect={() => submitComparison('movie1')}
+            disabled={isLoading}
+          />
+        </div>
         
-        <MovieCard
-          movie={movie2}
-          onSelect={() => submitComparison('movie2')}
-          disabled={isLoading}
-          label="I prefer this one"
-          icon={<ChevronRightIcon className="w-5 h-5" />}
-        />
+        <div className="w-full max-w-xs">
+          <MovieCard
+            movie={movie2}
+            onSelect={() => submitComparison('movie2')}
+            disabled={isLoading}
+          />
+        </div>
       </div>
       
       <div className="mt-6 text-center">
@@ -120,24 +119,27 @@ interface MovieCardProps {
   };
   onSelect: () => void;
   disabled: boolean;
-  label: string;
-  icon: React.ReactNode;
 }
 
 const MovieCard: React.FC<MovieCardProps> = ({
   movie,
   onSelect,
-  disabled,
-  label,
-  icon
+  disabled
 }) => {
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : '';
   const posterUrl = movie.posterPath 
-    ? `https://image.tmdb.org/t/p/w500${movie.posterPath}`
+    ? `https://image.tmdb.org/t/p/w342${movie.posterPath}`
     : '/placeholder-movie.svg';
   
   return (
-    <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+    <div 
+      className={`bg-white rounded-lg shadow-lg overflow-hidden flex flex-col cursor-pointer transition-all duration-200 transform ${
+        disabled 
+          ? 'opacity-50 cursor-not-allowed' 
+          : 'hover:shadow-2xl hover:shadow-blue-400/50 hover:-translate-y-1 hover:scale-[1.02]'
+      }`}
+      onClick={disabled ? undefined : onSelect}
+    >
       <div className="aspect-[2/3] relative">
         <img
           src={posterUrl}
@@ -149,27 +151,13 @@ const MovieCard: React.FC<MovieCardProps> = ({
         />
       </div>
       
-      <div className="p-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+      <div className="p-3">
+        <h3 className="text-base font-semibold text-gray-900 mb-1 line-clamp-1">
           {movie.title}
         </h3>
         {year && (
-          <p className="text-sm text-gray-600 mb-3">{year}</p>
+          <p className="text-sm text-gray-600">{year}</p>
         )}
-        {movie.overview && (
-          <p className="text-sm text-gray-700 line-clamp-3 mb-4">
-            {movie.overview}
-          </p>
-        )}
-        
-        <button
-          onClick={onSelect}
-          disabled={disabled}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {icon}
-          <span>{label}</span>
-        </button>
       </div>
     </div>
   );

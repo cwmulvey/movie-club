@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import RankingsList from '../components/ranking/RankingsList';
-import useRankingStore from '../stores/rankingStore';
+import { useNavigate } from 'react-router-dom';
 
-interface TrendingMovie {
+interface Movie {
   tmdbId: number;
   title: string;
   overview?: string;
   posterPath?: string;
+  backdropPath?: string;
   releaseDate?: string;
   voteAverage: number;
   popularity: number;
@@ -18,110 +18,236 @@ interface TrendingMovie {
   };
 }
 
+interface MovieList {
+  id: string;
+  title: string;
+  movies: Movie[];
+  loading: boolean;
+  error: string | null;
+}
+
 export default function Lists() {
-  const [trendingMovies, setTrendingMovies] = useState<TrendingMovie[]>([]);
-  const [loadingTrending, setLoadingTrending] = useState(false);
-  const { userRankings, fetchUserRankings, isLoading } = useRankingStore();
+  const navigate = useNavigate();
+  const [movieLists, setMovieLists] = useState<MovieList[]>([
+    { id: 'trending', title: 'Trending This Week', movies: [], loading: true, error: null },
+    { id: 'popular', title: 'Popular Movies', movies: [], loading: true, error: null },
+    { id: 'now_playing', title: 'Now Playing', movies: [], loading: true, error: null },
+    { id: 'upcoming', title: 'Upcoming', movies: [], loading: true, error: null },
+    { id: 'top_rated', title: 'Top Rated by Users', movies: [], loading: true, error: null },
+    { id: 'decade_2020s', title: 'Best of 2020s', movies: [], loading: true, error: null },
+    { id: 'decade_2010s', title: 'Best of 2010s', movies: [], loading: true, error: null },
+    { id: 'decade_2000s', title: 'Best of 2000s', movies: [], loading: true, error: null },
+  ]);
 
   useEffect(() => {
-    fetchUserRankings();
-    loadTrendingMovies();
+    loadAllLists();
   }, []);
 
+  const updateList = (listId: string, updates: Partial<MovieList>) => {
+    setMovieLists(prev => prev.map(list => 
+      list.id === listId ? { ...list, ...updates } : list
+    ));
+  };
+
+  const loadAllLists = async () => {
+    await Promise.all([
+      loadTrendingMovies(),
+      loadPopularMovies(),
+      loadNowPlayingMovies(),
+      loadUpcomingMovies(),
+      loadTopRatedMovies(),
+      loadDecadeMovies('2020s'),
+      loadDecadeMovies('2010s'),
+      loadDecadeMovies('2000s'),
+    ]);
+  };
+
   const loadTrendingMovies = async () => {
-    setLoadingTrending(true);
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/movies/trending`,
         {
           params: { timeWindow: 'week' },
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         }
       );
-      setTrendingMovies(response.data.results || []);
+      updateList('trending', { movies: response.data.results.slice(0, 20), loading: false });
     } catch (error) {
-      console.error('Failed to load trending movies:', error);
-    } finally {
-      setLoadingTrending(false);
+      updateList('trending', { error: 'Failed to load trending movies', loading: false });
     }
   };
 
-  const totalRankings = userRankings.liked.length + userRankings.ok.length + userRankings.disliked.length;
+  const loadPopularMovies = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/movies/popular`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      updateList('popular', { movies: response.data.results.slice(0, 20), loading: false });
+    } catch (error) {
+      updateList('popular', { error: 'Failed to load popular movies', loading: false });
+    }
+  };
+
+  const loadNowPlayingMovies = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/movies/now-playing`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      updateList('now_playing', { movies: response.data.results.slice(0, 20), loading: false });
+    } catch (error) {
+      updateList('now_playing', { error: 'Failed to load now playing movies', loading: false });
+    }
+  };
+
+  const loadUpcomingMovies = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/movies/upcoming`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      updateList('upcoming', { movies: response.data.results.slice(0, 20), loading: false });
+    } catch (error) {
+      updateList('upcoming', { error: 'Failed to load upcoming movies', loading: false });
+    }
+  };
+
+  const loadTopRatedMovies = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/movies/top-rated-by-users`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      updateList('top_rated', { movies: response.data.results.slice(0, 20), loading: false });
+    } catch (error) {
+      updateList('top_rated', { error: 'Failed to load top rated movies', loading: false });
+    }
+  };
+
+  const loadDecadeMovies = async (decade: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/movies/decade/${decade}`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      updateList(`decade_${decade.toLowerCase()}`, { 
+        movies: response.data.results.slice(0, 20), 
+        loading: false 
+      });
+    } catch (error) {
+      updateList(`decade_${decade.toLowerCase()}`, { 
+        error: `Failed to load ${decade} movies`, 
+        loading: false 
+      });
+    }
+  };
 
   return (
     <div className="p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Your Movie Collection</h1>
+        <h1 className="text-3xl font-bold mb-2">Movie Lists</h1>
         <p className="text-gray-600">
-          View your ranked movies and discover trending films
+          Discover curated collections of great movies
         </p>
       </div>
 
-      {totalRankings > 0 ? (
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-6">Your Rankings</h2>
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <RankingsList 
-              rankings={userRankings}
-              isOwner={true}
-            />
-          </div>
-        </div>
-      ) : (
-        <div className="mb-12 bg-blue-50 border border-blue-200 text-blue-800 px-6 py-4 rounded-lg">
-          <h3 className="font-semibold mb-2">Start Building Your Collection</h3>
-          <p className="mb-3">
-            You haven't ranked any movies yet. Head to the Search page to find and rank your first movie!
-          </p>
-          <a
-            href="/search"
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors inline-block"
-          >
-            Search Movies
-          </a>
-        </div>
-      )}
-
-      <div>
-        <h2 className="text-2xl font-bold mb-6">Trending This Week</h2>
-        
-        {loadingTrending ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading trending movies...</p>
-          </div>
-        ) : trendingMovies.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {trendingMovies.map((movie) => (
-              <TrendingMovieCard key={movie.tmdbId} movie={movie} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-500">Unable to load trending movies at this time.</p>
-          </div>
-        )}
+      <div className="space-y-8">
+        {movieLists.map((list) => (
+          <MovieListSection
+            key={list.id}
+            list={list}
+            onMovieClick={(movie) => navigate(`/movie/${movie.tmdbId}`)}
+          />
+        ))}
       </div>
     </div>
   );
 }
 
-interface TrendingMovieCardProps {
-  movie: TrendingMovie;
+interface MovieListSectionProps {
+  list: MovieList;
+  onMovieClick: (movie: Movie) => void;
 }
 
-const TrendingMovieCard: React.FC<TrendingMovieCardProps> = ({ movie }) => {
+const MovieListSection: React.FC<MovieListSectionProps> = ({ list, onMovieClick }) => {
+  if (list.loading) {
+    return (
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-4">{list.title}</h2>
+        <div className="flex space-x-4 overflow-x-hidden">
+          {Array.from({ length: 10 }).map((_, index) => (
+            <div key={index} className="flex-shrink-0 w-48">
+              <div className="aspect-[2/3] bg-gray-200 rounded-lg animate-pulse"></div>
+              <div className="mt-2 h-4 bg-gray-200 rounded animate-pulse"></div>
+              <div className="mt-1 h-3 bg-gray-200 rounded animate-pulse w-2/3"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (list.error) {
+    return (
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-4">{list.title}</h2>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {list.error}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-8">
+      <h2 className="text-2xl font-bold mb-4">{list.title}</h2>
+      <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide">
+        {list.movies.map((movie) => (
+          <MovieCard
+            key={movie.tmdbId}
+            movie={movie}
+            onClick={() => onMovieClick(movie)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+interface MovieCardProps {
+  movie: Movie;
+  onClick: () => void;
+}
+
+const MovieCard: React.FC<MovieCardProps> = ({ movie, onClick }) => {
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : '';
   const posterUrl = movie.posterPath
-    ? `https://image.tmdb.org/t/p/w500${movie.posterPath}`
+    ? `https://image.tmdb.org/t/p/w342${movie.posterPath}`
     : '/placeholder-movie.svg';
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      <div className="aspect-[2/3] relative">
+    <div 
+      className="flex-shrink-0 w-48 cursor-pointer transform hover:scale-105 transition-transform duration-200"
+      onClick={onClick}
+    >
+      <div className="aspect-[2/3] relative rounded-lg overflow-hidden shadow-md">
         <img
           src={posterUrl}
           alt={movie.title}
@@ -130,40 +256,25 @@ const TrendingMovieCard: React.FC<TrendingMovieCardProps> = ({ movie }) => {
             (e.target as HTMLImageElement).src = '/placeholder-movie.svg';
           }}
         />
-        <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs">
-          Trending
-        </div>
         {movie.inDatabase && (
           <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs">
-            In Database
+            ★ Ranked
           </div>
         )}
-      </div>
-
-      <div className="p-4">
-        <h3 className="font-semibold text-lg mb-1 line-clamp-2">
-          {movie.title}
-        </h3>
-        {year && (
-          <p className="text-gray-600 text-sm mb-2">{year}</p>
-        )}
-
-        <div className="text-sm text-gray-600 mb-3">
-          <p>TMDB Rating: {movie.voteAverage.toFixed(1)}/10</p>
-          {movie.appStats && movie.appStats.totalRankings > 0 && (
-            <>
-              <p>App Rating: {movie.appStats.averageRating.toFixed(1)}/10</p>
-              <p>{movie.appStats.totalRankings} ranking(s)</p>
-            </>
-          )}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+          <h3 className="text-white font-semibold text-sm line-clamp-2">
+            {movie.title}
+          </h3>
+          <div className="flex justify-between items-center mt-1">
+            {year && (
+              <span className="text-gray-300 text-xs">{year}</span>
+            )}
+            <div className="flex items-center space-x-2 text-xs">
+              <span className="text-yellow-400">⭐</span>
+              <span className="text-white">{movie.voteAverage.toFixed(1)}</span>
+            </div>
+          </div>
         </div>
-
-        <a
-          href="/search"
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors block text-center"
-        >
-          Rank This Movie
-        </a>
       </div>
     </div>
   );
