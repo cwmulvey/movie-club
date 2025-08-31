@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import RankingModal from '../components/ranking/RankingModal';
 
 interface MovieDetails {
   id: string;
@@ -35,6 +36,12 @@ interface MovieDetails {
     averageRating: number;
     lastUpdated: string;
   };
+  userRanking?: {
+    rating: number;
+    category: string;
+    rankInCategory: number;
+    rankingDate: string;
+  };
 }
 
 export default function MovieDetails() {
@@ -44,6 +51,7 @@ export default function MovieDetails() {
   const [movie, setMovie] = useState<MovieDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRankingModalOpen, setIsRankingModalOpen] = useState(false);
 
   useEffect(() => {
     fetchMovieDetails();
@@ -61,6 +69,8 @@ export default function MovieDetails() {
         }
       });
       
+      console.log('Movie details API response:', response.data);
+      console.log('userRanking in response:', response.data.userRanking);
       setMovie(response.data);
     } catch (err: any) {
       console.error('Error fetching movie details:', err);
@@ -85,6 +95,16 @@ export default function MovieDetails() {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const handleRankMovie = () => {
+    setIsRankingModalOpen(true);
+  };
+
+  const handleCloseRankingModal = () => {
+    setIsRankingModalOpen(false);
+    // Refresh movie details to get updated ranking data
+    fetchMovieDetails();
   };
 
   if (loading) {
@@ -187,6 +207,17 @@ export default function MovieDetails() {
                   </div>
                 )}
 
+                {movie.userRanking && (
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-400">
+                      ⭐ {movie.userRanking.rating.toFixed(1)}
+                    </div>
+                    <div className="text-xs text-gray-300">
+                      Your Rating ({movie.userRanking.category})
+                    </div>
+                  </div>
+                )}
+
                 {movie.externalIds?.imdb_id && (
                   <div className="text-center">
                     <a
@@ -201,6 +232,18 @@ export default function MovieDetails() {
                   </div>
                 )}
               </div>
+
+              {/* Ranking Action */}
+              {!movie.userRanking && user && (
+                <div className="mb-6">
+                  <button
+                    onClick={handleRankMovie}
+                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold"
+                  >
+                    ⭐ Rank This Movie
+                  </button>
+                </div>
+              )}
 
               {/* Overview */}
               <div className="mb-6">
@@ -304,6 +347,22 @@ export default function MovieDetails() {
           </div>
         </div>
       </div>
+
+      {/* Ranking Modal */}
+      <RankingModal
+        isOpen={isRankingModalOpen}
+        onClose={handleCloseRankingModal}
+        movie={movie ? {
+          tmdbId: movie.tmdbId,
+          title: movie.title,
+          overview: movie.overview,
+          posterPath: movie.posterPath,
+          releaseDate: movie.releaseDate,
+          voteAverage: movie.tmdbVoteAverage || 0,
+          inDatabase: true,
+          appStats: movie.appStats
+        } : null}
+      />
     </div>
   );
 }

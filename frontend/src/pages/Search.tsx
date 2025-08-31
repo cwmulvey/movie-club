@@ -14,6 +14,12 @@ interface Movie {
     totalRankings: number;
     averageRating: number;
   };
+  userRanking?: {
+    rating: number;
+    category: string;
+    rankInCategory: number;
+    rankingDate: string;
+  };
 }
 
 export default function Search() {

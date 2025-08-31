@@ -16,6 +16,12 @@ interface Movie {
     totalRankings: number;
     averageRating: number;
   };
+  userRanking?: {
+    rating: number;
+    category: string;
+    rankInCategory: number;
+    rankingDate: string;
+  };
 }
 
 interface MovieList {
@@ -256,9 +262,9 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onClick }) => {
             (e.target as HTMLImageElement).src = '/placeholder-movie.svg';
           }}
         />
-        {movie.inDatabase && (
+        {movie.userRanking && (
           <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs">
-            ★ Ranked
+            ★ {movie.userRanking.rating.toFixed(1)}
           </div>
         )}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">

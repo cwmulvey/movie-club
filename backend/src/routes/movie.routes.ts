@@ -1,8 +1,10 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { authenticateToken } from '../middleware/auth';
 import { Movie } from '../models/Movie';
+import { UserRanking } from '../models/UserRanking';
 import { searchMovies } from '../services/tmdb.service';
 import { AppError } from '../utils/AppError';
+import { AuthenticatedRequest } from '../types/auth.types';
 import axios from 'axios';
 
 const router = Router();
@@ -170,7 +172,7 @@ router.get('/popular/week', async (_req: Request, res: Response, next: NextFunct
   }
 });
 
-router.get('/trending', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/trending', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { timeWindow = 'week' } = req.query;
     console.log('Trending movies endpoint called with timeWindow:', timeWindow);
@@ -196,6 +198,15 @@ router.get('/trending', async (req: Request, res: Response, next: NextFunction) 
       validMovies.map(async (tmdbMovie: any) => {
         const existingMovie = await Movie.findOne({ tmdbId: tmdbMovie.id });
         
+        // Check if current user has ranked this movie
+        let userRanking = null;
+        if (req.user) {
+          userRanking = await UserRanking.findOne({ 
+            userId: req.user.id,
+            tmdbId: tmdbMovie.id 
+          });
+        }
+        
         return {
           tmdbId: tmdbMovie.id,
           title: tmdbMovie.title,
@@ -205,7 +216,13 @@ router.get('/trending', async (req: Request, res: Response, next: NextFunction) 
           voteAverage: tmdbMovie.vote_average,
           popularity: tmdbMovie.popularity,
           inDatabase: !!existingMovie,
-          appStats: existingMovie ? existingMovie.appStats : null
+          appStats: existingMovie ? existingMovie.appStats : null,
+          userRanking: userRanking ? {
+            rating: userRanking.calculatedRating,
+            category: userRanking.category,
+            rankInCategory: userRanking.rankInCategory,
+            rankingDate: userRanking.rankingDate
+          } : null
         };
       })
     );
@@ -220,7 +237,7 @@ router.get('/trending', async (req: Request, res: Response, next: NextFunction) 
 });
 
 // Popular movies endpoint
-router.get('/popular', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/popular', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     console.log('Popular movies endpoint called');
     console.log('TMDB_API_KEY present:', !!TMDB_API_KEY);
@@ -244,6 +261,15 @@ router.get('/popular', async (_req: Request, res: Response, next: NextFunction) 
       validMovies.map(async (tmdbMovie: any) => {
           const existingMovie = await Movie.findOne({ tmdbId: tmdbMovie.id });
           
+          // Check if current user has ranked this movie
+          let userRanking = null;
+          if (req.user) {
+            userRanking = await UserRanking.findOne({ 
+              userId: req.user.id,
+              tmdbId: tmdbMovie.id 
+            });
+          }
+          
           return {
             tmdbId: tmdbMovie.id,
             title: tmdbMovie.title,
@@ -254,7 +280,13 @@ router.get('/popular', async (_req: Request, res: Response, next: NextFunction) 
             voteAverage: tmdbMovie.vote_average,
             popularity: tmdbMovie.popularity,
             inDatabase: !!existingMovie,
-            appStats: existingMovie ? existingMovie.appStats : null
+            appStats: existingMovie ? existingMovie.appStats : null,
+            userRanking: userRanking ? {
+              rating: userRanking.calculatedRating,
+              category: userRanking.category,
+              rankInCategory: userRanking.rankInCategory,
+              rankingDate: userRanking.rankingDate
+            } : null
           };
         })
     );
@@ -270,7 +302,7 @@ router.get('/popular', async (_req: Request, res: Response, next: NextFunction) 
 });
 
 // Now playing movies endpoint  
-router.get('/now-playing', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/now-playing', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const nowPlayingResponse = await tmdbApi.get('/movie/now_playing');
     const nowPlaying = nowPlayingResponse.data;
@@ -280,6 +312,15 @@ router.get('/now-playing', async (_req: Request, res: Response, next: NextFuncti
         .filter((tmdbMovie: any) => tmdbMovie.id && !isNaN(tmdbMovie.id))
         .map(async (tmdbMovie: any) => {
         const existingMovie = await Movie.findOne({ tmdbId: tmdbMovie.id });
+        
+        // Check if current user has ranked this movie
+        let userRanking = null;
+        if (req.user) {
+          userRanking = await UserRanking.findOne({ 
+            userId: req.user.id,
+            tmdbId: tmdbMovie.id 
+          });
+        }
         
         return {
           tmdbId: tmdbMovie.id,
@@ -291,7 +332,13 @@ router.get('/now-playing', async (_req: Request, res: Response, next: NextFuncti
           voteAverage: tmdbMovie.vote_average,
           popularity: tmdbMovie.popularity,
           inDatabase: !!existingMovie,
-          appStats: existingMovie ? existingMovie.appStats : null
+          appStats: existingMovie ? existingMovie.appStats : null,
+          userRanking: userRanking ? {
+            rating: userRanking.calculatedRating,
+            category: userRanking.category,
+            rankInCategory: userRanking.rankInCategory,
+            rankingDate: userRanking.rankingDate
+          } : null
         };
       })
     );
@@ -305,7 +352,7 @@ router.get('/now-playing', async (_req: Request, res: Response, next: NextFuncti
 });
 
 // Upcoming movies endpoint
-router.get('/upcoming', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/upcoming', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const upcomingResponse = await tmdbApi.get('/movie/upcoming');
     const upcoming = upcomingResponse.data;
@@ -315,6 +362,15 @@ router.get('/upcoming', async (_req: Request, res: Response, next: NextFunction)
         .filter((tmdbMovie: any) => tmdbMovie.id && !isNaN(tmdbMovie.id))
         .map(async (tmdbMovie: any) => {
         const existingMovie = await Movie.findOne({ tmdbId: tmdbMovie.id });
+        
+        // Check if current user has ranked this movie
+        let userRanking = null;
+        if (req.user) {
+          userRanking = await UserRanking.findOne({ 
+            userId: req.user.id,
+            tmdbId: tmdbMovie.id 
+          });
+        }
         
         return {
           tmdbId: tmdbMovie.id,
@@ -326,7 +382,13 @@ router.get('/upcoming', async (_req: Request, res: Response, next: NextFunction)
           voteAverage: tmdbMovie.vote_average,
           popularity: tmdbMovie.popularity,
           inDatabase: !!existingMovie,
-          appStats: existingMovie ? existingMovie.appStats : null
+          appStats: existingMovie ? existingMovie.appStats : null,
+          userRanking: userRanking ? {
+            rating: userRanking.calculatedRating,
+            category: userRanking.category,
+            rankInCategory: userRanking.rankInCategory,
+            rankingDate: userRanking.rankingDate
+          } : null
         };
       })
     );
@@ -371,7 +433,7 @@ router.get('/top-rated-by-users', async (_req: Request, res: Response, next: Nex
 });
 
 // Decade-based movie endpoints
-router.get('/decade/:decade', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/decade/:decade', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { decade } = req.params;
     
@@ -393,7 +455,7 @@ router.get('/decade/:decade', async (req: Request, res: Response, next: NextFunc
     const discoverResponse = await tmdbApi.get('/discover/movie', {
       params: {
         sort_by: 'vote_average.desc',
-        'vote_count.gte': 100, // Minimum votes for reliability
+        'vote_count.gte': 1000, // Minimum votes for mainstream movies
         'primary_release_date.gte': `${range.start}-01-01`,
         'primary_release_date.lte': `${range.end}-12-31`,
         page: 1
@@ -409,6 +471,15 @@ router.get('/decade/:decade', async (req: Request, res: Response, next: NextFunc
         .map(async (tmdbMovie: any) => {
         const existingMovie = await Movie.findOne({ tmdbId: tmdbMovie.id });
         
+        // Check if current user has ranked this movie
+        let userRanking = null;
+        if (req.user) {
+          userRanking = await UserRanking.findOne({ 
+            userId: req.user.id,
+            tmdbId: tmdbMovie.id 
+          });
+        }
+        
         return {
           tmdbId: tmdbMovie.id,
           title: tmdbMovie.title,
@@ -419,7 +490,13 @@ router.get('/decade/:decade', async (req: Request, res: Response, next: NextFunc
           voteAverage: tmdbMovie.vote_average,
           popularity: tmdbMovie.popularity,
           inDatabase: !!existingMovie,
-          appStats: existingMovie ? existingMovie.appStats : null
+          appStats: existingMovie ? existingMovie.appStats : null,
+          userRanking: userRanking ? {
+            rating: userRanking.calculatedRating,
+            category: userRanking.category,
+            rankInCategory: userRanking.rankInCategory,
+            rankingDate: userRanking.rankingDate
+          } : null
         };
       })
     );
@@ -434,7 +511,7 @@ router.get('/decade/:decade', async (req: Request, res: Response, next: NextFunc
 });
 
 // IMPORTANT: Keep this route at the end - it's a catch-all for numeric IDs
-router.get('/:tmdbId', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/:tmdbId', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const { tmdbId } = req.params;
     console.log('Movie detail endpoint called with tmdbId:', tmdbId);
@@ -448,83 +525,93 @@ router.get('/:tmdbId', async (req: Request, res: Response, next: NextFunction) =
     
     let movie = await Movie.findOne({ tmdbId: numericTmdbId });
     
-    if (!movie) {
-      const [tmdbMovieResponse, creditsResponse] = await Promise.all([
-        tmdbApi.get(`/movie/${tmdbId}`),
-        tmdbApi.get(`/movie/${tmdbId}/credits`),
-        // TODO: Use these in future updates
-        // tmdbApi.get(`/movie/${tmdbId}/watch/providers`).catch(() => ({ data: { results: {} } })),
-        // tmdbApi.get(`/movie/${tmdbId}/external_ids`).catch(() => ({ data: {} }))
+    // Always fetch TMDB data for additional details
+    const [tmdbMovieResponse, creditsResponse] = await Promise.all([
+      tmdbApi.get(`/movie/${tmdbId}`),
+      tmdbApi.get(`/movie/${tmdbId}/credits`)
+    ]);
+    
+    const tmdbMovie = tmdbMovieResponse.data;
+    const credits = creditsResponse.data;
+    
+    // Create movie object (but don't save to database unless it's already there)
+    const movieData = {
+      tmdbId: tmdbMovie.id,
+      title: tmdbMovie.title,
+      overview: tmdbMovie.overview,
+      posterPath: tmdbMovie.poster_path,
+      backdropPath: tmdbMovie.backdrop_path,
+      releaseDate: tmdbMovie.release_date ? new Date(tmdbMovie.release_date) : undefined,
+      runtime: tmdbMovie.runtime,
+      genres: tmdbMovie.genres.map((g: any) => g.name),
+      directors: credits.crew
+        .filter((c: any) => c.job === 'Director')
+        .map((d: any) => d.name),
+      cast: credits.cast
+        .slice(0, 10)
+        .map((c: any) => c.name),
+      tmdbVoteAverage: tmdbMovie.vote_average,
+      tmdbVoteCount: tmdbMovie.vote_count,
+      tmdbPopularity: tmdbMovie.popularity,
+      // Default appStats for new movies (not saved to database)
+      appStats: movie?.appStats || {
+        totalRankings: 0,
+        averageRating: 0,
+        likedCount: 0,
+        okCount: 0,
+        dislikedCount: 0,
+        lastUpdated: new Date()
+      }
+    };
+    
+    // Use existing database movie if available, otherwise use TMDB data
+    const finalMovieData = movie ? {
+      ...movieData,
+      id: movie._id,
+      appStats: movie.appStats
+    } : movieData;
+    
+    // Fetch additional data
+    let additionalData: any = {};
+    try {
+      const [watchProvidersResponse, externalIdsResponse] = await Promise.all([
+        tmdbApi.get(`/movie/${numericTmdbId}/watch/providers`).catch(() => ({ data: { results: {} } })),
+        tmdbApi.get(`/movie/${numericTmdbId}/external_ids`).catch(() => ({ data: {} }))
       ]);
       
-      const tmdbMovie = tmdbMovieResponse.data;
-      const credits = creditsResponse.data;
-      // TODO: Use watchProviders and externalIds in future updates
-      
-      movie = new Movie({
-        tmdbId: tmdbMovie.id,
-        title: tmdbMovie.title,
-        overview: tmdbMovie.overview,
-        posterPath: tmdbMovie.poster_path,
-        backdropPath: tmdbMovie.backdrop_path,
-        releaseDate: tmdbMovie.release_date ? new Date(tmdbMovie.release_date) : undefined,
-        runtime: tmdbMovie.runtime,
-        genres: tmdbMovie.genres.map((g: any) => g.name),
-        directors: credits.crew
-          .filter((c: any) => c.job === 'Director')
-          .map((d: any) => d.name),
-        cast: credits.cast
-          .slice(0, 10)
-          .map((c: any) => c.name),
-        tmdbVoteAverage: tmdbMovie.vote_average,
-        tmdbVoteCount: tmdbMovie.vote_count,
-        tmdbPopularity: tmdbMovie.popularity
-      });
-      
-      await movie.save();
+      additionalData = {
+        watchProviders: watchProvidersResponse.data.results?.US || {},
+        externalIds: externalIdsResponse.data,
+        budget: tmdbMovie.budget,
+        revenue: tmdbMovie.revenue,
+        tagline: tmdbMovie.tagline,
+        homepage: tmdbMovie.homepage,
+        productionCompanies: tmdbMovie.production_companies?.map((c: any) => c.name) || []
+      };
+    } catch (error) {
+      console.error('Error fetching additional data:', error);
     }
     
-    // Fetch additional data for existing movies too
-    let additionalData: any = {};
-    if (movie) {
-      try {
-        const [watchProvidersResponse, externalIdsResponse, tmdbDetailResponse] = await Promise.all([
-          tmdbApi.get(`/movie/${movie.tmdbId}/watch/providers`).catch(() => ({ data: { results: {} } })),
-          tmdbApi.get(`/movie/${movie.tmdbId}/external_ids`).catch(() => ({ data: {} })),
-          tmdbApi.get(`/movie/${movie.tmdbId}`).catch(() => ({ data: {} }))
-        ]);
-        
-        additionalData = {
-          watchProviders: watchProvidersResponse.data.results?.US || {},
-          externalIds: externalIdsResponse.data,
-          budget: tmdbDetailResponse.data.budget,
-          revenue: tmdbDetailResponse.data.revenue,
-          tagline: tmdbDetailResponse.data.tagline,
-          homepage: tmdbDetailResponse.data.homepage,
-          productionCompanies: tmdbDetailResponse.data.production_companies?.map((c: any) => c.name) || []
-        };
-      } catch (error) {
-        console.error('Error fetching additional data:', error);
-      }
+    // Check if user has ranked this movie
+    let userRanking = null;
+    if (req.user) {
+      console.log(`Looking for UserRanking with userId: ${req.user.id}, tmdbId: ${numericTmdbId}`);
+      userRanking = await UserRanking.findOne({ 
+        userId: req.user.id,
+        tmdbId: numericTmdbId 
+      });
+      console.log('UserRanking found:', userRanking ? `Rating: ${userRanking.calculatedRating}, Category: ${userRanking.category}` : 'No ranking found');
     }
     
     res.json({
-      id: movie._id,
-      tmdbId: movie.tmdbId,
-      title: movie.title,
-      overview: movie.overview,
-      posterPath: movie.posterPath,
-      backdropPath: movie.backdropPath,
-      releaseDate: movie.releaseDate,
-      runtime: movie.runtime,
-      genres: movie.genres,
-      directors: movie.directors,
-      cast: movie.cast,
-      tmdbVoteAverage: movie.tmdbVoteAverage,
-      tmdbVoteCount: movie.tmdbVoteCount,
-      tmdbPopularity: movie.tmdbPopularity,
-      appStats: movie.appStats,
-      ...additionalData
+      ...finalMovieData,
+      ...additionalData,
+      userRanking: userRanking ? {
+        rating: userRanking.calculatedRating,
+        category: userRanking.category,
+        rankInCategory: userRanking.rankInCategory,
+        rankingDate: userRanking.rankingDate
+      } : null
     });
   } catch (error) {
     next(error);

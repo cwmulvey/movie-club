@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 interface Movie {
@@ -14,6 +15,12 @@ interface Movie {
     totalRankings: number;
     averageRating: number;
   };
+  userRanking?: {
+    rating: number;
+    category: string;
+    rankInCategory: number;
+    rankingDate: string;
+  };
 }
 
 interface MovieSearchProps {
@@ -21,10 +28,30 @@ interface MovieSearchProps {
 }
 
 const MovieSearch: React.FC<MovieSearchProps> = ({ onMovieSelect }) => {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState('');
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Initialize query from URL params and run search on mount
+  useEffect(() => {
+    const urlQuery = searchParams.get('q');
+    if (urlQuery) {
+      setQuery(urlQuery);
+      searchMovies(urlQuery);
+    }
+  }, []);
+
+  // Update URL when query changes
+  const updateURL = (searchQuery: string) => {
+    if (searchQuery.trim()) {
+      setSearchParams({ q: searchQuery });
+    } else {
+      setSearchParams({});
+    }
+  };
 
   const searchMovies = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
@@ -48,7 +75,16 @@ const MovieSearch: React.FC<MovieSearchProps> = ({ onMovieSelect }) => {
       );
 
       console.log('Movie search results:', response.data.results);
-      setMovies(response.data.results || []);
+      const sortedMovies = (response.data.results || []).sort((a: Movie, b: Movie) => {
+        // Sort by total rankings (descending), then by vote average (descending)
+        const aRankings = a.appStats?.totalRankings || 0;
+        const bRankings = b.appStats?.totalRankings || 0;
+        if (aRankings !== bRankings) {
+          return bRankings - aRankings;
+        }
+        return b.voteAverage - a.voteAverage;
+      });
+      setMovies(sortedMovies);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to search movies');
       setMovies([]);
@@ -59,6 +95,7 @@ const MovieSearch: React.FC<MovieSearchProps> = ({ onMovieSelect }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    updateURL(query);
     searchMovies(query);
   };
 
@@ -70,7 +107,14 @@ const MovieSearch: React.FC<MovieSearchProps> = ({ onMovieSelect }) => {
           <input
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              // Clear results if query is empty
+              if (!e.target.value.trim()) {
+                setMovies([]);
+                setSearchParams({});
+              }
+            }}
             placeholder="Search for movies..."
             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
@@ -91,12 +135,13 @@ const MovieSearch: React.FC<MovieSearchProps> = ({ onMovieSelect }) => {
       )}
 
       {movies.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
           {movies.map((movie) => (
             <MovieCard
               key={movie.tmdbId}
               movie={movie}
               onSelect={onMovieSelect}
+              onPosterClick={() => navigate(`/movie/${movie.tmdbId}`)}
             />
           ))}
         </div>
@@ -114,9 +159,10 @@ const MovieSearch: React.FC<MovieSearchProps> = ({ onMovieSelect }) => {
 interface MovieCardProps {
   movie: Movie;
   onSelect?: (movie: Movie) => void;
+  onPosterClick?: () => void;
 }
 
-const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelect }) => {
+const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelect, onPosterClick }) => {
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : '';
   const posterUrl = movie.posterPath
     ? `https://image.tmdb.org/t/p/w500${movie.posterPath}`
@@ -124,7 +170,10 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelect }) => {
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      <div className="aspect-[2/3] relative">
+      <div 
+        className="aspect-[2/3] relative cursor-pointer hover:opacity-90 transition-opacity"
+        onClick={onPosterClick}
+      >
         <img
           src={posterUrl}
           alt={movie.title}
@@ -133,31 +182,36 @@ const MovieCard: React.FC<MovieCardProps> = ({ movie, onSelect }) => {
             (e.target as HTMLImageElement).src = '/placeholder-movie.svg';
           }}
         />
-        {movie.inDatabase && (
-          <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs">
-            In Database
+        {movie.userRanking ? (
+          <div className="absolute top-2 right-2 bg-green-500 text-white px-1.5 py-0.5 rounded text-xs">
+            ★ {movie.userRanking.rating.toFixed(1)}
+          </div>
+        ) : movie.inDatabase && (
+          <div className="absolute top-2 right-2 bg-blue-500 text-white px-1.5 py-0.5 rounded text-xs">
+            In DB
           </div>
         )}
       </div>
 
-      <div className="p-4">
-        <h3 className="font-semibold text-lg mb-1 line-clamp-2">
+      <div className="p-3">
+        <h3 className="font-semibold text-sm mb-1 line-clamp-2 leading-tight">
           {movie.title}
         </h3>
-        {year && (
-          <p className="text-gray-600 text-sm mb-2">{year}</p>
-        )}
+        
+        <div className="flex justify-between items-center mb-2 text-xs text-gray-600">
+          {year && <span>{year}</span>}
+          <span>⭐ {movie.voteAverage.toFixed(1)}</span>
+        </div>
 
         {movie.appStats && movie.appStats.totalRankings > 0 && (
-          <div className="text-sm text-gray-600 mb-3">
-            <p>Average Rating: {movie.appStats.averageRating.toFixed(1)}/10</p>
-            <p>{movie.appStats.totalRankings} ranking(s)</p>
+          <div className="text-xs text-gray-600 mb-2">
+            <p>{movie.appStats.averageRating.toFixed(1)}/10 • {movie.appStats.totalRankings} ranking{movie.appStats.totalRankings !== 1 ? 's' : ''}</p>
           </div>
         )}
 
         <button
           onClick={() => onSelect?.(movie)}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+          className="w-full bg-blue-600 text-white py-1.5 px-3 rounded text-sm hover:bg-blue-700 transition-colors"
         >
           Rank This Movie
         </button>
